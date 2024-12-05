@@ -28,8 +28,25 @@ class HomeScreen extends StatelessWidget {
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Name: ${user.displayName}"),
-                  Text("Email: ${user.email}"),
+                  // Exibe a imagem de perfil do usuário
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage: user.photoURL != null
+                        ? NetworkImage(user.photoURL!)
+                        : null,
+                    child: user.photoURL == null
+                        ? const Icon(Icons.person, size: 50)
+                        : null,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Name: ${user.displayName}",
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  Text(
+                    "Email: ${user.email}",
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ],
               )
             : const Text("No user logged in"),

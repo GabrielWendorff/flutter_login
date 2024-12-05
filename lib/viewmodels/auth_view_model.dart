@@ -4,34 +4,49 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 
-class AuthViewModel extends ChangeNotifier { // Corrigir aqui
+class AuthViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   UserModel? currentUser;
 
   Future<void> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-    final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+    try {
+      // Realiza o login com o Google
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
 
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth?.accessToken,
-      idToken: googleAuth?.idToken,
-    );
+      if (googleAuth == null) return;
 
-    final userCredential = await _auth.signInWithCredential(credential);
-    final user = userCredential.user;
-
-    if (user != null) {
-      currentUser = UserModel(
-        uid: user.uid,
-        displayName: user.displayName,
-        email: user.email,
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
-      // Salva os dados no Firestore
-      await _firestore.collection('users').doc(user.uid).set(currentUser!.toMap());
-      notifyListeners(); // Notifica as alterações
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        // Preenche o modelo com os dados do usuário, incluindo photoURL
+        currentUser = UserModel(
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL, // Adiciona o photoURL
+        );
+
+        // Salva ou atualiza os dados no Firestore
+        await _firestore.collection('users').doc(user.uid).set(
+              currentUser!.toMap(),
+              SetOptions(merge: true), // Atualiza se já existir
+            );
+
+        notifyListeners(); // Notifica alterações para a UI
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error during Google Sign-In: $e");
+      }
     }
   }
 
@@ -39,6 +54,6 @@ class AuthViewModel extends ChangeNotifier { // Corrigir aqui
     await _auth.signOut();
     await GoogleSignIn().signOut();
     currentUser = null;
-    notifyListeners(); // Notifica as alterações
+    notifyListeners(); // Notifica alterações para a UI
   }
 }
